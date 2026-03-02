@@ -45,6 +45,7 @@ class TestScanExitCodes:
         assert result.returncode == 1
         assert "warn:" in result.stderr
         assert "bad.md" in result.stderr
+        assert "ONE haiku agent" in result.stderr
         assert "mdscan set-description bad.md" in result.stderr
 
     def test_exit_1_description_too_long(self, tmp_path: Path) -> None:
@@ -55,9 +56,17 @@ class TestScanExitCodes:
 
         result = run_mdscan(str(tmp_path))
         assert result.returncode == 1
+        # stderr diagnostics
         assert "hint:" in result.stderr
         assert "160 words" in result.stderr
+        assert "truncated" in result.stderr
+        assert "ONE haiku agent" in result.stderr
         assert "mdscan set-description long.md" in result.stderr
+        # stdout: description truncated to 150 words + "..."
+        assert "long.md" in result.stdout
+        stdout_words = result.stdout.split("long.md", 1)[1].split()
+        assert stdout_words[-1] == "..."
+        assert len(stdout_words) == 151  # 150 words + "..."
 
 
 class TestScanOutput:
@@ -107,6 +116,7 @@ class TestSetDescription:
         result = run_mdscan("set-description", str(f), long_desc)
         assert result.returncode == 1
         assert "hint:" in result.stderr
+        assert "ONE haiku agent" in result.stderr
         assert "mdscan set-description" in result.stderr
         # Still writes the file
         content = f.read_text(encoding="utf-8")

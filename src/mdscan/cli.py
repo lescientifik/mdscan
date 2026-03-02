@@ -103,7 +103,7 @@ def _run_set_description(argv: list[str]) -> None:
             file=sys.stderr,
         )
         print(
-            f"  fix: spawn a haiku agent to read {path} and run"
+            f"  fix: spawn ONE haiku agent to read {path} and run"
             f" `mdscan set-description {path} \"...\"`"
             f" with a shorter description",
             file=sys.stderr,
@@ -130,7 +130,7 @@ def _print_diagnostics(files: list[MdFile]) -> bool:
                 file=sys.stderr,
             )
             print(
-                f"  fix: spawn a haiku agent to read {f.path} and run"
+                f"  fix: spawn ONE haiku agent to read {f.path} and run"
                 f" `mdscan set-description {f.path} \"...\"`",
                 file=sys.stderr,
             )
@@ -138,11 +138,12 @@ def _print_diagnostics(files: list[MdFile]) -> bool:
         elif f.word_count is not None and f.word_count > MAX_DESCRIPTION_WORDS:
             print(
                 f"hint: {f.path} — description too long"
-                f" ({f.word_count} words, max {MAX_DESCRIPTION_WORDS})",
+                f" ({f.word_count} words, max {MAX_DESCRIPTION_WORDS}),"
+                f" truncated in output",
                 file=sys.stderr,
             )
             print(
-                f"  fix: spawn a haiku agent to read {f.path} and run"
+                f"  fix: spawn ONE haiku agent to read {f.path} and run"
                 f" `mdscan set-description {f.path} \"...\"`"
                 f" with a shorter description",
                 file=sys.stderr,
