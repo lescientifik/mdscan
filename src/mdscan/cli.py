@@ -69,10 +69,7 @@ def _run_scan(argv: list[str]) -> None:
 
     has_warnings = _print_diagnostics(files)
 
-    if args.json:
-        output = format_json(files)
-    else:
-        output = format_text(files)
+    output = format_json(files) if args.json else format_text(files)
 
     if output:
         print(output)

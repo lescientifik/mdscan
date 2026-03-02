@@ -55,7 +55,7 @@ def is_too_long(description: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _parse_frontmatter(text: str) -> dict | None:  # type: ignore[type-arg]
+def _parse_frontmatter(text: str) -> dict[str, object] | None:
     """Return the frontmatter as a dict, or ``None`` if absent."""
     if not text.startswith("---"):
         return None
