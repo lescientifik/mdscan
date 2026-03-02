@@ -194,15 +194,3 @@ uv run pytest -q
 18 passed in 0.67s
 ```
 
-## Installation
-
-Installed globally with `uv tool install -e .` — editable mode means source changes take effect immediately without reinstalling.
-
-```bash
-which mdscan && mdscan --version
-```
-
-```output
-/home/thenry/.local/bin/mdscan
-mdscan 0.1.0
-```
