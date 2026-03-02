@@ -1,0 +1,35 @@
+[project]
+name = "mdscan"
+version = "0.1.0"
+description = "Scan .md files and display YAML frontmatter descriptions"
+authors = [
+    { name = "lescientifik", email = "18367137+lescientifik@users.noreply.github.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0.3",
+]
+
+[project.scripts]
+mdscan = "mdscan.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.15.4",
+    "ty>=0.0.19",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
