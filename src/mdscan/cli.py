@@ -18,14 +18,79 @@ from mdscan.scanner import scan
 
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the ``mdscan`` CLI."""
-    args = argv if argv is not None else sys.argv[1:]
+    parser = argparse.ArgumentParser(
+        prog="mdscan",
+        description="Scan .md files and display YAML frontmatter descriptions.",
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
-    if args and args[0] == "set-description":
-        _run_set_description(args[1:])
-    elif args and args[0] == "check-links":
-        _run_check_links(args[1:])
-    else:
+    subparsers = parser.add_subparsers(dest="command")
+
+    # -- scan (default) -----------------------------------------------------
+    scan_parser = subparsers.add_parser(
+        "scan", help="Scan .md files and display descriptions (default)."
+    )
+    scan_parser.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Directory to scan (default: current directory).",
+    )
+    scan_parser.add_argument("--json", action="store_true", help="Output as JSON array.")
+    scan_parser.add_argument(
+        "--max-depth",
+        type=int,
+        default=None,
+        help="Limit directory recursion depth.",
+    )
+    scan_parser.add_argument(
+        "--ignore",
+        action="append",
+        help="Additional glob patterns to exclude (repeatable).",
+    )
+
+    # -- check-links --------------------------------------------------------
+    cl_parser = subparsers.add_parser(
+        "check-links", help="Check reachability of .md files from an entrypoint."
+    )
+    cl_parser.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Directory to scan (default: current directory).",
+    )
+    cl_parser.add_argument(
+        "--entrypoint",
+        default=None,
+        help="Entrypoint file (relative to directory). Default: CLAUDE.md or README.md.",
+    )
+    cl_parser.add_argument("--json", action="store_true", help="Output as JSON object.")
+
+    # -- set-description ----------------------------------------------------
+    sd_parser = subparsers.add_parser(
+        "set-description", help="Write or update the frontmatter description of a file."
+    )
+    sd_parser.add_argument("file", help="Markdown file to update.")
+    sd_parser.add_argument("description", help="Description text to write.")
+
+    # -- parse --------------------------------------------------------------
+    # Default to "scan" when no subcommand is given, so that bare
+    # `mdscan docs/` and `mdscan --json docs/` keep working.
+    # Let --help and --version through to the top-level parser.
+    raw = argv if argv is not None else sys.argv[1:]
+    known_commands = {"scan", "check-links", "set-description"}
+    top_level_flags = {"-h", "--help", "--version"}
+    if not raw or (raw[0] not in known_commands and raw[0] not in top_level_flags):
+        raw = ["scan", *raw]
+
+    args = parser.parse_args(raw)
+
+    if args.command == "scan":
         _run_scan(args)
+    elif args.command == "check-links":
+        _run_check_links(args)
+    elif args.command == "set-description":
+        _run_set_description(args)
 
 
 # ---------------------------------------------------------------------------
@@ -33,33 +98,8 @@ def main(argv: list[str] | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run_scan(argv: list[str]) -> None:
+def _run_scan(args: argparse.Namespace) -> None:
     """Execute the default scan subcommand."""
-    parser = argparse.ArgumentParser(
-        prog="mdscan",
-        description="Scan .md files and display YAML frontmatter descriptions.",
-    )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument(
-        "directory",
-        nargs="?",
-        default=".",
-        help="Directory to scan (default: current directory).",
-    )
-    parser.add_argument("--json", action="store_true", help="Output as JSON array.")
-    parser.add_argument(
-        "--max-depth",
-        type=int,
-        default=None,
-        help="Limit directory recursion depth.",
-    )
-    parser.add_argument(
-        "--ignore",
-        action="append",
-        help="Additional glob patterns to exclude (repeatable).",
-    )
-
-    args = parser.parse_args(argv)
     directory = Path(args.directory)
 
     if not directory.is_dir():
@@ -82,16 +122,8 @@ def _run_scan(argv: list[str]) -> None:
     sys.exit(1 if has_warnings else 0)
 
 
-def _run_set_description(argv: list[str]) -> None:
+def _run_set_description(args: argparse.Namespace) -> None:
     """Execute the ``set-description`` subcommand."""
-    parser = argparse.ArgumentParser(
-        prog="mdscan set-description",
-        description="Write or update the frontmatter description of a file.",
-    )
-    parser.add_argument("file", help="Markdown file to update.")
-    parser.add_argument("description", help="Description text to write.")
-
-    args = parser.parse_args(argv)
     path = Path(args.file)
 
     if not path.is_file():
@@ -120,26 +152,8 @@ def _run_set_description(argv: list[str]) -> None:
     sys.exit(0)
 
 
-def _run_check_links(argv: list[str]) -> None:
+def _run_check_links(args: argparse.Namespace) -> None:
     """Execute the ``check-links`` subcommand."""
-    parser = argparse.ArgumentParser(
-        prog="mdscan check-links",
-        description="Check reachability of .md files from an entrypoint.",
-    )
-    parser.add_argument(
-        "directory",
-        nargs="?",
-        default=".",
-        help="Directory to scan (default: current directory).",
-    )
-    parser.add_argument(
-        "--entrypoint",
-        default=None,
-        help="Entrypoint file (relative to directory). Default: CLAUDE.md or README.md.",
-    )
-    parser.add_argument("--json", action="store_true", help="Output as JSON object.")
-
-    args = parser.parse_args(argv)
     directory = Path(args.directory)
 
     if not directory.is_dir():
