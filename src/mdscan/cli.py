@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import posixpath
 import sys
 from collections import deque
 from pathlib import Path, PurePosixPath
@@ -186,11 +187,9 @@ def _run_check_links(argv: list[str]) -> None:
         for raw_link in current_file.links:
             # Resolve link relative to the file's directory.
             if current_dir == ".":
-                resolved = str(PurePosixPath(raw_link))
+                resolved = posixpath.normpath(raw_link)
             else:
-                resolved = str(PurePosixPath(current_dir) / raw_link)
-            # Normalize (collapse ../ etc.).
-            resolved = str(PurePosixPath(resolved))
+                resolved = posixpath.normpath(posixpath.join(current_dir, raw_link))
 
             if resolved not in scanned_paths:
                 broken_links.append((current, raw_link))
