@@ -1,3 +1,6 @@
+---
+description: Interactive demo of all mdscan CLI features with captured output.
+---
 # mdscan CLI Demo
 
 *2026-03-02T16:02:26Z by Showboat 0.6.1*
