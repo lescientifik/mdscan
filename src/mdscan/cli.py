@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
-from pathlib import Path
+from collections import deque
+from pathlib import Path, PurePosixPath
 
 from mdscan import __version__
 from mdscan._types import MdFile
@@ -19,6 +21,8 @@ def main(argv: list[str] | None = None) -> None:
 
     if args and args[0] == "set-description":
         _run_set_description(args[1:])
+    elif args and args[0] == "check-links":
+        _run_check_links(args[1:])
     else:
         _run_scan(args)
 
@@ -103,7 +107,7 @@ def _run_set_description(argv: list[str]) -> None:
             file=sys.stderr,
         )
         print(
-            f"  fix: spawn ONE haiku agent to read {path} and run"
+            f"  fix: have ONE agent (e.g. fast model like Haiku) read {path} and run"
             f" `mdscan set-description {path} \"...\"`"
             f" with a shorter description",
             file=sys.stderr,
@@ -113,6 +117,134 @@ def _run_set_description(argv: list[str]) -> None:
 
     print(f"wrote: {path}")
     sys.exit(0)
+
+
+def _run_check_links(argv: list[str]) -> None:
+    """Execute the ``check-links`` subcommand."""
+    parser = argparse.ArgumentParser(
+        prog="mdscan check-links",
+        description="Check reachability of .md files from an entrypoint.",
+    )
+    parser.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Directory to scan (default: current directory).",
+    )
+    parser.add_argument(
+        "--entrypoint",
+        default=None,
+        help="Entrypoint file (relative to directory). Default: CLAUDE.md or README.md.",
+    )
+    parser.add_argument("--json", action="store_true", help="Output as JSON object.")
+
+    args = parser.parse_args(argv)
+    directory = Path(args.directory)
+
+    if not directory.is_dir():
+        print(f"error: not a directory: {directory}", file=sys.stderr)
+        sys.exit(2)
+
+    # Resolve entrypoint.
+    entrypoint: str | None = args.entrypoint
+    if entrypoint is None:
+        if (directory / "CLAUDE.md").is_file():
+            entrypoint = "CLAUDE.md"
+        elif (directory / "README.md").is_file():
+            entrypoint = "README.md"
+        else:
+            print(
+                "error: no entrypoint found (no CLAUDE.md or README.md in directory)",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+    # Scan all .md files (check-links includes CLAUDE.md).
+    files = scan(directory, include_excluded_files=True)
+
+    # Build lookup of all scanned paths.
+    scanned_paths: set[str] = {f.path for f in files}
+
+    if entrypoint not in scanned_paths:
+        print(f"error: entrypoint not found: {entrypoint}", file=sys.stderr)
+        sys.exit(2)
+
+    # Build adjacency: path -> resolved link targets.
+    file_by_path: dict[str, MdFile] = {f.path: f for f in files}
+
+    # BFS from entrypoint.
+    reachable: set[str] = set()
+    broken_links: list[tuple[str, str]] = []
+    queue: deque[str] = deque([entrypoint])
+    reachable.add(entrypoint)
+
+    while queue:
+        current = queue.popleft()
+        current_file = file_by_path[current]
+        current_dir = str(PurePosixPath(current).parent)
+
+        for raw_link in current_file.links:
+            # Resolve link relative to the file's directory.
+            if current_dir == ".":
+                resolved = str(PurePosixPath(raw_link))
+            else:
+                resolved = str(PurePosixPath(current_dir) / raw_link)
+            # Normalize (collapse ../ etc.).
+            resolved = str(PurePosixPath(resolved))
+
+            if resolved not in scanned_paths:
+                broken_links.append((current, raw_link))
+                continue
+            if resolved not in reachable:
+                reachable.add(resolved)
+                queue.append(resolved)
+
+    unreachable = sorted(scanned_paths - reachable)
+    has_issues = bool(unreachable) or bool(broken_links)
+
+    # Diagnostics to stderr.
+    print(f"entrypoint: {entrypoint}", file=sys.stderr)
+
+    for source, target in broken_links:
+        print(
+            f"warn: {source} — broken link to {target} (file not found)",
+            file=sys.stderr,
+        )
+        print(
+            f"  fix: have ONE agent (e.g. fast model like Haiku) read {source} and"
+            f" fix or remove the broken link to {target}",
+            file=sys.stderr,
+        )
+
+    for path in unreachable:
+        print(
+            f"warn: {path} — unreachable from {entrypoint} (no link chain connects them)",
+            file=sys.stderr,
+        )
+        print(
+            "  fix: have ONE agent (e.g. smart model like Opus) review this file and either"
+            " link it from a reachable doc, or confirm with the user that it can be removed",
+            file=sys.stderr,
+        )
+
+    # stdout summary.
+    total = len(scanned_paths)
+    reachable_count = len(reachable)
+
+    if args.json:
+        data = {
+            "entrypoint": entrypoint,
+            "reachable": sorted(reachable),
+            "unreachable": unreachable,
+            "broken_links": [
+                {"source": src, "target": tgt} for src, tgt in broken_links
+            ],
+        }
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+    else:
+        print(f"{reachable_count}/{total} files reachable from {entrypoint}")
+
+    sys.exit(1 if has_issues else 0)
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +262,7 @@ def _print_diagnostics(files: list[MdFile]) -> bool:
                 file=sys.stderr,
             )
             print(
-                f"  fix: spawn ONE haiku agent to read {f.path} and run"
+                f"  fix: have ONE agent (e.g. fast model like Haiku) read {f.path} and run"
                 f" `mdscan set-description {f.path} \"...\"`",
                 file=sys.stderr,
             )
@@ -143,7 +275,7 @@ def _print_diagnostics(files: list[MdFile]) -> bool:
                 file=sys.stderr,
             )
             print(
-                f"  fix: spawn ONE haiku agent to read {f.path} and run"
+                f"  fix: have ONE agent (e.g. fast model like Haiku) read {f.path} and run"
                 f" `mdscan set-description {f.path} \"...\"`"
                 f" with a shorter description",
                 file=sys.stderr,

@@ -29,3 +29,29 @@ class TestScan:
         assert "no_fm.md" not in paths
         assert "no_desc.md" not in paths
         assert "valid.md" in paths
+
+    def test_claude_md_excluded_from_scan(self, tmp_path: Path) -> None:
+        (tmp_path / "CLAUDE.md").write_text(
+            "---\ndescription: Instructions.\n---\n# Claude\n", encoding="utf-8"
+        )
+        (tmp_path / "README.md").write_text(
+            "---\ndescription: Readme.\n---\n# Readme\n", encoding="utf-8"
+        )
+        results = scan(tmp_path)
+        paths = [f.path for f in results]
+        assert "CLAUDE.md" not in paths
+        assert "README.md" in paths
+
+    def test_scan_populates_links(self, tmp_path: Path) -> None:
+        (tmp_path / "index.md").write_text(
+            "---\ndescription: Index.\n---\nSee [guide](guide.md) and [faq](faq.md).\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "guide.md").write_text(
+            "---\ndescription: Guide.\n---\n# Guide\n", encoding="utf-8"
+        )
+        results = scan(tmp_path)
+        index = next(f for f in results if f.path == "index.md")
+        assert index.links == ["guide.md", "faq.md"]
+        guide = next(f for f in results if f.path == "guide.md")
+        assert guide.links == []
