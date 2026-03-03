@@ -3,8 +3,8 @@ description: Interactive demo of all mdscan CLI features with captured output.
 ---
 # mdscan CLI Demo
 
-*2026-03-02T20:42:10Z by Showboat 0.6.1*
-<!-- showboat-id: fb58f15b-ea54-41ee-85de-ed8137c921a8 -->
+*2026-03-03T19:43:12Z by Showboat 0.6.1*
+<!-- showboat-id: 8808e6b9-839a-4306-9f0e-d24a4ef9f82d -->
 
 mdscan scans directories for .md files and displays their YAML frontmatter descriptions. It helps AI agents quickly discover relevant documentation without reading entire files.
 
@@ -83,6 +83,7 @@ INNER
 
 echo "Done. Files created:"
 find /tmp/demo_docs -name "*.md" | sort
+
 ```
 
 ```output
@@ -113,22 +114,21 @@ warn: 1 file missing YAML frontmatter description:
 hint: 1 file with description too long (max 150 words), truncated in output:
   - verbose.md (160 words)
   fix: for EACH file, have a dedicated agent (e.g. fast model like Haiku) read the file and run `mdscan set-description <file> "..."` with a shorter description
+hint: to persist settings, add a [tool.mdscan] section in pyproject.toml (see mdscan --help)
+hint: run 'mdscan check-links' to verify link reachability
 README.md         Project overview and getting started guide.
-                    → links: setup.md, guides/deploy.md
 api.md            API gateway rate limiting strategies and configuration.
-                    → links: setup.md
 guides/deploy.md  Step-by-step deployment guide for production environments.
-                    → links: ../api.md
 setup.md          Development environment setup guide for new contributors.
 verbose.md        word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ...
 exit code: 1
 ```
 
-Note: CLAUDE.md, node_modules/lib.md and .claude/settings.md are excluded from the scan. Links between files appear as → lines below each description. Warnings are grouped by type with a single fix instruction per group.
+Note: CLAUDE.md, node_modules/lib.md and .claude/settings.md are excluded from the scan. Warnings are grouped by type with a single fix instruction per group.
 
 ## JSON output
 
-`--json` includes all files with `null` for missing descriptions and a `links` array for each file.
+`--json` includes all files with `null` for missing descriptions.
 
 ```bash
 mdscan --json /tmp/demo_docs 2>/dev/null
@@ -138,40 +138,27 @@ mdscan --json /tmp/demo_docs 2>/dev/null
 [
   {
     "path": "README.md",
-    "description": "Project overview and getting started guide.",
-    "links": [
-      "setup.md",
-      "guides/deploy.md"
-    ]
+    "description": "Project overview and getting started guide."
   },
   {
     "path": "api.md",
-    "description": "API gateway rate limiting strategies and configuration.",
-    "links": [
-      "setup.md"
-    ]
+    "description": "API gateway rate limiting strategies and configuration."
   },
   {
     "path": "guides/deploy.md",
-    "description": "Step-by-step deployment guide for production environments.",
-    "links": [
-      "../api.md"
-    ]
+    "description": "Step-by-step deployment guide for production environments."
   },
   {
     "path": "notes.md",
-    "description": null,
-    "links": []
+    "description": null
   },
   {
     "path": "setup.md",
-    "description": "Development environment setup guide for new contributors.",
-    "links": []
+    "description": "Development environment setup guide for new contributors."
   },
   {
     "path": "verbose.md",
-    "description": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ...",
-    "links": []
+    "description": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ..."
   }
 ]
 ```
@@ -191,7 +178,7 @@ warn: 2 files unreachable from CLAUDE.md (no link chain connects them):
   - verbose.md
   fix: for EACH file, have a dedicated agent (e.g. smart model like Opus) review the file and either link it from a reachable doc, or confirm with the user that it can be removed
 5/7 files reachable from CLAUDE.md
-exit code: 1
+exit code: 3
 ```
 
 notes.md and verbose.md are orphans — no link chain from CLAUDE.md reaches them. Both appear in a single grouped warning with one fix instruction. The fix messages distinguish fast tasks (broken links → Haiku) from smart tasks (orphan review → Opus).
@@ -211,6 +198,7 @@ See [auth docs](auth.md) for authentication.
 INNER
 
 mdscan check-links /tmp/demo_docs 2>&1; echo "exit code: $?"
+
 ```
 
 ```output
@@ -223,7 +211,7 @@ warn: 1 broken link (target file not found):
   - api.md → auth.md
   fix: for EACH source file, have a dedicated agent (e.g. fast model like Haiku) fix or remove its broken links
 5/7 files reachable from CLAUDE.md
-exit code: 1
+exit code: 3
 ```
 
 ## check-links — explicit entrypoint
@@ -245,7 +233,7 @@ warn: 1 broken link (target file not found):
   - api.md → auth.md
   fix: for EACH source file, have a dedicated agent (e.g. fast model like Haiku) fix or remove its broken links
 4/7 files reachable from README.md
-exit code: 1
+exit code: 3
 ```
 
 ## check-links — with --ignore
@@ -262,6 +250,7 @@ See [setup](setup.md) for prerequisites.
 INNER
 
 mdscan check-links --ignore "notes.md" --ignore "verbose.md" /tmp/demo_docs 2>&1; echo "exit code: $?"
+
 ```
 
 ```output
@@ -278,6 +267,7 @@ Each file gets its own agent. The agent reads the file and runs `mdscan set-desc
 mdscan set-description /tmp/demo_docs/notes.md "Weekly team meeting notes and action items."
 echo "---"
 cat /tmp/demo_docs/notes.md
+
 ```
 
 ```output
@@ -318,36 +308,69 @@ mdscan --ignore "notes*" /tmp/demo_docs 2>/dev/null
 echo ""
 echo "=== --ignore \"guides/*\" (relative path) ==="
 mdscan --ignore "guides/*" /tmp/demo_docs 2>/dev/null
+
 ```
 
 ```output
 === --max-depth 0 (root only) ===
 README.md   Project overview and getting started guide.
-              → links: setup.md, guides/deploy.md
 api.md      API gateway rate limiting strategies and configuration.
-              → links: setup.md
 notes.md    Weekly team meeting notes and action items.
 setup.md    Development environment setup guide for new contributors.
 verbose.md  word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ...
 
 === --ignore "notes*" ===
 README.md         Project overview and getting started guide.
-                    → links: setup.md, guides/deploy.md
 api.md            API gateway rate limiting strategies and configuration.
-                    → links: setup.md
 guides/deploy.md  Step-by-step deployment guide for production environments.
-                    → links: ../api.md
 setup.md          Development environment setup guide for new contributors.
 verbose.md        word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ...
 
 === --ignore "guides/*" (relative path) ===
 README.md   Project overview and getting started guide.
-              → links: setup.md, guides/deploy.md
 api.md      API gateway rate limiting strategies and configuration.
-              → links: setup.md
 notes.md    Weekly team meeting notes and action items.
 setup.md    Development environment setup guide for new contributors.
 verbose.md  word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ...
+```
+
+## tree — document link graph
+
+Display the link graph rooted at the entrypoint. Shows how documents connect to each other.
+
+```bash
+mdscan tree /tmp/demo_docs 2>&1
+```
+
+```output
+CLAUDE.md
+├── README.md
+│   ├── setup.md
+│   └── guides/deploy.md
+│       └── api.md
+│           └── setup.md (*)
+└── api.md (*)
+
+orphans:
+  notes.md
+  verbose.md
+```
+
+## coverage — documentation completeness
+
+Show statistics about frontmatter coverage across all .md files.
+
+```bash
+mdscan coverage /tmp/demo_docs 2>&1
+```
+
+```output
+files:         7
+described:     7 (100%)
+reachable:     5/7 (71%)
+broken links:  0
+avg words:     28
+longest:       verbose.md (160 words)
 ```
 
 ## Test suite
@@ -357,6 +380,7 @@ uv run pytest -q
 ```
 
 ```output
+........................................................................ [ 67%]
 ...................................                                      [100%]
-35 passed in 1.75s
+107 passed in 25.58s
 ```
