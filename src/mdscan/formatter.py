@@ -21,20 +21,28 @@ def format_text(files: list[MdFile]) -> str:
     Descriptions exceeding the word limit are truncated.
     """
     valid = [
-        (f.path, _truncate(f.description), f.links)
+        (f.path, _truncate(f.description))
         for f in files
         if f.description is not None
     ]
     if not valid:
         return ""
-    width = max(len(p) for p, _, _ in valid)
-    lines: list[str] = []
-    for path, desc, links in valid:
-        lines.append(f"{path:<{width}}  {desc}")
-        if links:
-            padding = " " * width
-            lines.append(f"{padding}    → links: {', '.join(links)}")
-    return "\n".join(lines)
+    width = max(len(p) for p, _ in valid)
+    return "\n".join(f"{path:<{width}}  {desc}" for path, desc in valid)
+
+
+def format_plain(files: list[MdFile]) -> str:
+    """Format files as tab-separated ``path\\tdescription`` lines.
+
+    Files without a description are excluded.
+    Descriptions exceeding the word limit are truncated.
+    """
+    valid = [
+        (f.path, _truncate(f.description))
+        for f in files
+        if f.description is not None
+    ]
+    return "\n".join(f"{path}\t{desc}" for path, desc in valid)
 
 
 def format_json(files: list[MdFile]) -> str:
@@ -46,7 +54,6 @@ def format_json(files: list[MdFile]) -> str:
         {
             "path": f.path,
             "description": _truncate(f.description) if f.description else None,
-            "links": f.links,
         }
         for f in files
     ]

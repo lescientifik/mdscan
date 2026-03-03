@@ -1,6 +1,6 @@
 [project]
 name = "mdscan"
-version = "0.1.0"
+version = "0.3.0"
 description = "Scan .md files and display YAML frontmatter descriptions"
 authors = [
     { name = "lescientifik", email = "18367137+lescientifik@users.noreply.github.com" }
@@ -31,6 +31,9 @@ line-length = 99
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mdscan]
+entrypoint = "CLAUDE.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

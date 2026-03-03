@@ -41,3 +41,4 @@ mdscan --max-depth 1 --ignore "draft*" docs/
 | `0`  | All `.md` files have valid frontmatter |
 | `1`  | Scan OK but some files have warnings |
 | `2`  | Usage error (bad args, directory not found) |
+
