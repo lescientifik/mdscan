@@ -65,6 +65,11 @@ def main(argv: list[str] | None = None) -> None:
         help="Entrypoint file (relative to directory). Default: CLAUDE.md or README.md.",
     )
     cl_parser.add_argument("--json", action="store_true", help="Output as JSON object.")
+    cl_parser.add_argument(
+        "--ignore",
+        action="append",
+        help="Additional glob patterns to exclude (repeatable).",
+    )
 
     # -- set-description ----------------------------------------------------
     sd_parser = subparsers.add_parser(
@@ -175,7 +180,8 @@ def _run_check_links(args: argparse.Namespace) -> None:
             sys.exit(2)
 
     # Scan all .md files (check-links includes CLAUDE.md).
-    files = scan(directory, include_excluded_files=True)
+    files = scan(directory, include_excluded_files=True,
+                 ignore_patterns=args.ignore or [])
 
     # Build lookup of all scanned paths.
     scanned_paths: set[str] = {f.path for f in files}
@@ -218,25 +224,35 @@ def _run_check_links(args: argparse.Namespace) -> None:
     # Diagnostics to stderr.
     print(f"entrypoint: {entrypoint}", file=sys.stderr)
 
-    for source, target in broken_links:
+    if unreachable:
+        n = len(unreachable)
+        label = "file" if n == 1 else "files"
         print(
-            f"warn: {source} — broken link to {target} (file not found)",
+            f"warn: {n} {label} unreachable from {entrypoint}"
+            f" (no link chain connects them):",
             file=sys.stderr,
         )
+        for path in unreachable:
+            print(f"  - {path}", file=sys.stderr)
         print(
-            f"  fix: have ONE agent (e.g. fast model like Haiku) read {source} and"
-            f" fix or remove the broken link to {target}",
+            "  fix: for EACH file, have a dedicated agent (e.g. smart model like"
+            " Opus) review the file and either link it from a reachable doc, or"
+            " confirm with the user that it can be removed",
             file=sys.stderr,
         )
 
-    for path in unreachable:
+    if broken_links:
+        n = len(broken_links)
+        label = "broken link" if n == 1 else "broken links"
         print(
-            f"warn: {path} — unreachable from {entrypoint} (no link chain connects them)",
+            f"warn: {n} {label} (target file not found):",
             file=sys.stderr,
         )
+        for source, target in broken_links:
+            print(f"  - {source} → {target}", file=sys.stderr)
         print(
-            "  fix: have ONE agent (e.g. smart model like Opus) review this file and either"
-            " link it from a reachable doc, or confirm with the user that it can be removed",
+            "  fix: for EACH source file, have a dedicated agent (e.g. fast model"
+            " like Haiku) fix or remove its broken links",
             file=sys.stderr,
         )
 
@@ -267,31 +283,43 @@ def _run_check_links(args: argparse.Namespace) -> None:
 
 def _print_diagnostics(files: list[MdFile]) -> bool:
     """Print warnings and hints to stderr. Return ``True`` if any were emitted."""
-    has_warnings = False
-    for f in files:
-        if f.description is None:
-            print(
-                f"warn: {f.path} — missing YAML frontmatter description, no summary available",
-                file=sys.stderr,
-            )
-            print(
-                f"  fix: have ONE agent (e.g. fast model like Haiku) read {f.path} and run"
-                f" `mdscan set-description {f.path} \"...\"`",
-                file=sys.stderr,
-            )
-            has_warnings = True
-        elif f.word_count is not None and f.word_count > MAX_DESCRIPTION_WORDS:
-            print(
-                f"hint: {f.path} — description too long"
-                f" ({f.word_count} words, max {MAX_DESCRIPTION_WORDS}),"
-                f" truncated in output",
-                file=sys.stderr,
-            )
-            print(
-                f"  fix: have ONE agent (e.g. fast model like Haiku) read {f.path} and run"
-                f" `mdscan set-description {f.path} \"...\"`"
-                f" with a shorter description",
-                file=sys.stderr,
-            )
-            has_warnings = True
-    return has_warnings
+    missing = [f for f in files if f.description is None]
+    too_long = [
+        f for f in files
+        if f.word_count is not None and f.word_count > MAX_DESCRIPTION_WORDS
+    ]
+
+    if missing:
+        n = len(missing)
+        label = "file" if n == 1 else "files"
+        print(
+            f"warn: {n} {label} missing YAML frontmatter description:",
+            file=sys.stderr,
+        )
+        for f in missing:
+            print(f"  - {f.path}", file=sys.stderr)
+        print(
+            "  fix: for EACH file, have a dedicated agent (e.g. fast model like"
+            " Haiku) read the file and run"
+            ' `mdscan set-description <file> "..."`',
+            file=sys.stderr,
+        )
+
+    if too_long:
+        n = len(too_long)
+        label = "file" if n == 1 else "files"
+        print(
+            f"hint: {n} {label} with description too long"
+            f" (max {MAX_DESCRIPTION_WORDS} words), truncated in output:",
+            file=sys.stderr,
+        )
+        for f in too_long:
+            print(f"  - {f.path} ({f.word_count} words)", file=sys.stderr)
+        print(
+            "  fix: for EACH file, have a dedicated agent (e.g. fast model like"
+            " Haiku) read the file and run"
+            ' `mdscan set-description <file> "..."` with a shorter description',
+            file=sys.stderr,
+        )
+
+    return bool(missing) or bool(too_long)

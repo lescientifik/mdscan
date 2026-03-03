@@ -9,6 +9,7 @@ from mdscan.links import extract_md_links
 
 EXCLUDED_DIRS: frozenset[str] = frozenset({
     ".git",
+    ".claude",
     "node_modules",
     "__pycache__",
     ".venv",
@@ -73,14 +74,16 @@ def _walk(
         if entry.is_dir():
             if entry.name in EXCLUDED_DIRS:
                 continue
-            if any(fnmatch(entry.name, pat) for pat in ignore_patterns):
+            rel = str(entry.relative_to(root))
+            if any(fnmatch(entry.name, pat) or fnmatch(rel, pat) for pat in ignore_patterns):
                 continue
             _walk(root, entry, results, max_depth, ignore_patterns,
                   include_excluded_files)
         elif entry.is_file() and entry.suffix == ".md":
             if not include_excluded_files and entry.name in EXCLUDED_FILES:
                 continue
-            if any(fnmatch(entry.name, pat) for pat in ignore_patterns):
+            rel = str(entry.relative_to(root))
+            if any(fnmatch(entry.name, pat) or fnmatch(rel, pat) for pat in ignore_patterns):
                 continue
             text = entry.read_text(encoding="utf-8")
             desc = extract_description(text)

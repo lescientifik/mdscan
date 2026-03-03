@@ -62,4 +62,11 @@ def md_tree(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
 
+    claude = tmp_path / ".claude"
+    claude.mkdir()
+    (claude / "hidden3.md").write_text(
+        "---\ndescription: Should not appear.\n---\n",
+        encoding="utf-8",
+    )
+
     return tmp_path

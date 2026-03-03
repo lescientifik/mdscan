@@ -22,6 +22,7 @@ class TestScan:
         paths = [f.path for f in results]
         assert not any("node_modules" in p for p in paths)
         assert not any(".git" in p for p in paths)
+        assert not any(".claude" in p for p in paths)
 
     def test_custom_ignore_pattern(self, md_tree: Path) -> None:
         results = scan(md_tree, ignore_patterns=["no_*"])
@@ -41,6 +42,34 @@ class TestScan:
         paths = [f.path for f in results]
         assert "CLAUDE.md" not in paths
         assert "README.md" in paths
+
+    def test_claude_dir_excluded_by_default(self, tmp_path: Path) -> None:
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "settings.md").write_text(
+            "---\ndescription: Settings.\n---\n# Settings\n", encoding="utf-8"
+        )
+        (tmp_path / "readme.md").write_text(
+            "---\ndescription: Readme.\n---\n# Readme\n", encoding="utf-8"
+        )
+        results = scan(tmp_path)
+        paths = [f.path for f in results]
+        assert ".claude/settings.md" not in paths
+        assert "readme.md" in paths
+
+    def test_ignore_pattern_matches_relative_path(self, tmp_path: Path) -> None:
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        (sub / "nested.md").write_text(
+            "---\ndescription: Nested.\n---\n# Nested\n", encoding="utf-8"
+        )
+        (tmp_path / "top.md").write_text(
+            "---\ndescription: Top.\n---\n# Top\n", encoding="utf-8"
+        )
+        results = scan(tmp_path, ignore_patterns=["sub/*"])
+        paths = [f.path for f in results]
+        assert "sub/nested.md" not in paths
+        assert "top.md" in paths
 
     def test_scan_populates_links(self, tmp_path: Path) -> None:
         (tmp_path / "index.md").write_text(

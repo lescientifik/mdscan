@@ -3,18 +3,18 @@ description: Interactive demo of all mdscan CLI features with captured output.
 ---
 # mdscan CLI Demo
 
-*2026-03-02T19:52:21Z by Showboat 0.6.1*
-<!-- showboat-id: 8e0cc05c-7c17-4c12-8b4d-4cb6718c863e -->
+*2026-03-02T20:42:10Z by Showboat 0.6.1*
+<!-- showboat-id: fb58f15b-ea54-41ee-85de-ed8137c921a8 -->
 
 mdscan scans directories for .md files and displays their YAML frontmatter descriptions. It helps AI agents quickly discover relevant documentation without reading entire files.
 
 ## Setup
 
-Create a sample docs/ directory with linked files, a CLAUDE.md entrypoint, an undocumented file, a verbose file, and a file in an excluded directory.
+Create a sample docs/ directory with linked files, a CLAUDE.md entrypoint, an undocumented file, a verbose file, and files in excluded directories.
 
 ```bash
 rm -rf /tmp/demo_docs
-mkdir -p /tmp/demo_docs/guides /tmp/demo_docs/node_modules
+mkdir -p /tmp/demo_docs/guides /tmp/demo_docs/node_modules /tmp/demo_docs/.claude
 
 cat > /tmp/demo_docs/CLAUDE.md << 'INNER'
 ---
@@ -75,6 +75,12 @@ description: Should be ignored by mdscan.
 ---
 INNER
 
+cat > /tmp/demo_docs/.claude/settings.md << 'INNER'
+---
+description: Claude agent settings.
+---
+INNER
+
 echo "Done. Files created:"
 find /tmp/demo_docs -name "*.md" | sort
 ```
@@ -83,6 +89,7 @@ find /tmp/demo_docs -name "*.md" | sort
 Done. Files created:
 /tmp/demo_docs/api.md
 /tmp/demo_docs/CLAUDE.md
+/tmp/demo_docs/.claude/settings.md
 /tmp/demo_docs/guides/deploy.md
 /tmp/demo_docs/node_modules/lib.md
 /tmp/demo_docs/notes.md
@@ -100,10 +107,12 @@ mdscan /tmp/demo_docs 2>&1; echo "exit code: $?"
 ```
 
 ```output
-warn: notes.md — missing YAML frontmatter description, no summary available
-  fix: have ONE agent (e.g. fast model like Haiku) read notes.md and run `mdscan set-description notes.md "..."`
-hint: verbose.md — description too long (160 words, max 150), truncated in output
-  fix: have ONE agent (e.g. fast model like Haiku) read verbose.md and run `mdscan set-description verbose.md "..."` with a shorter description
+warn: 1 file missing YAML frontmatter description:
+  - notes.md
+  fix: for EACH file, have a dedicated agent (e.g. fast model like Haiku) read the file and run `mdscan set-description <file> "..."`
+hint: 1 file with description too long (max 150 words), truncated in output:
+  - verbose.md (160 words)
+  fix: for EACH file, have a dedicated agent (e.g. fast model like Haiku) read the file and run `mdscan set-description <file> "..."` with a shorter description
 README.md         Project overview and getting started guide.
                     → links: setup.md, guides/deploy.md
 api.md            API gateway rate limiting strategies and configuration.
@@ -115,7 +124,7 @@ verbose.md        word word word word word word word word word word word word wo
 exit code: 1
 ```
 
-Note: CLAUDE.md and node_modules/lib.md are excluded from the scan. Links between files appear as → lines below each description. Each fix message tells the agent exactly which file to handle.
+Note: CLAUDE.md, node_modules/lib.md and .claude/settings.md are excluded from the scan. Links between files appear as → lines below each description. Warnings are grouped by type with a single fix instruction per group.
 
 ## JSON output
 
@@ -177,15 +186,15 @@ mdscan check-links /tmp/demo_docs 2>&1; echo "exit code: $?"
 
 ```output
 entrypoint: CLAUDE.md
-warn: notes.md — unreachable from CLAUDE.md (no link chain connects them)
-  fix: have ONE agent (e.g. smart model like Opus) review this file and either link it from a reachable doc, or confirm with the user that it can be removed
-warn: verbose.md — unreachable from CLAUDE.md (no link chain connects them)
-  fix: have ONE agent (e.g. smart model like Opus) review this file and either link it from a reachable doc, or confirm with the user that it can be removed
+warn: 2 files unreachable from CLAUDE.md (no link chain connects them):
+  - notes.md
+  - verbose.md
+  fix: for EACH file, have a dedicated agent (e.g. smart model like Opus) review the file and either link it from a reachable doc, or confirm with the user that it can be removed
 5/7 files reachable from CLAUDE.md
 exit code: 1
 ```
 
-notes.md and verbose.md are orphans — no link chain from CLAUDE.md reaches them. The fix messages distinguish fast tasks (broken links) from smart tasks (deciding what to do with orphans).
+notes.md and verbose.md are orphans — no link chain from CLAUDE.md reaches them. Both appear in a single grouped warning with one fix instruction. The fix messages distinguish fast tasks (broken links → Haiku) from smart tasks (orphan review → Opus).
 
 ## check-links — broken link
 
@@ -206,12 +215,13 @@ mdscan check-links /tmp/demo_docs 2>&1; echo "exit code: $?"
 
 ```output
 entrypoint: CLAUDE.md
-warn: api.md — broken link to auth.md (file not found)
-  fix: have ONE agent (e.g. fast model like Haiku) read api.md and fix or remove the broken link to auth.md
-warn: notes.md — unreachable from CLAUDE.md (no link chain connects them)
-  fix: have ONE agent (e.g. smart model like Opus) review this file and either link it from a reachable doc, or confirm with the user that it can be removed
-warn: verbose.md — unreachable from CLAUDE.md (no link chain connects them)
-  fix: have ONE agent (e.g. smart model like Opus) review this file and either link it from a reachable doc, or confirm with the user that it can be removed
+warn: 2 files unreachable from CLAUDE.md (no link chain connects them):
+  - notes.md
+  - verbose.md
+  fix: for EACH file, have a dedicated agent (e.g. smart model like Opus) review the file and either link it from a reachable doc, or confirm with the user that it can be removed
+warn: 1 broken link (target file not found):
+  - api.md → auth.md
+  fix: for EACH source file, have a dedicated agent (e.g. fast model like Haiku) fix or remove its broken links
 5/7 files reachable from CLAUDE.md
 exit code: 1
 ```
@@ -226,14 +236,38 @@ mdscan check-links --entrypoint README.md /tmp/demo_docs 2>&1; echo "exit code: 
 
 ```output
 entrypoint: README.md
-warn: CLAUDE.md — unreachable from README.md (no link chain connects them)
-  fix: have ONE agent (e.g. smart model like Opus) review this file and either link it from a reachable doc, or confirm with the user that it can be removed
-warn: notes.md — unreachable from README.md (no link chain connects them)
-  fix: have ONE agent (e.g. smart model like Opus) review this file and either link it from a reachable doc, or confirm with the user that it can be removed
-warn: verbose.md — unreachable from README.md (no link chain connects them)
-  fix: have ONE agent (e.g. smart model like Opus) review this file and either link it from a reachable doc, or confirm with the user that it can be removed
+warn: 3 files unreachable from README.md (no link chain connects them):
+  - CLAUDE.md
+  - notes.md
+  - verbose.md
+  fix: for EACH file, have a dedicated agent (e.g. smart model like Opus) review the file and either link it from a reachable doc, or confirm with the user that it can be removed
+warn: 1 broken link (target file not found):
+  - api.md → auth.md
+  fix: for EACH source file, have a dedicated agent (e.g. fast model like Haiku) fix or remove its broken links
 4/7 files reachable from README.md
 exit code: 1
+```
+
+## check-links — with --ignore
+
+Use `--ignore` to exclude files from the scan. Useful for files that are intentionally unlinked (e.g. meeting notes, drafts). Restore api.md first.
+
+```bash
+cat > /tmp/demo_docs/api.md << 'INNER'
+---
+description: API gateway rate limiting strategies and configuration.
+---
+# API Gateway
+See [setup](setup.md) for prerequisites.
+INNER
+
+mdscan check-links --ignore "notes.md" --ignore "verbose.md" /tmp/demo_docs 2>&1; echo "exit code: $?"
+```
+
+```output
+entrypoint: CLAUDE.md
+5/5 files reachable from CLAUDE.md
+exit code: 0
 ```
 
 ## Fixing missing frontmatter with set-description
@@ -273,12 +307,17 @@ exit code: 1
 
 ## Depth limiting and custom ignores
 
+`--ignore` patterns match against both filenames and relative paths, so `guides/*` excludes everything under the guides/ subdirectory.
+
 ```bash
 echo "=== --max-depth 0 (root only) ==="
 mdscan --max-depth 0 /tmp/demo_docs 2>/dev/null
 echo ""
 echo "=== --ignore \"notes*\" ==="
 mdscan --ignore "notes*" /tmp/demo_docs 2>/dev/null
+echo ""
+echo "=== --ignore \"guides/*\" (relative path) ==="
+mdscan --ignore "guides/*" /tmp/demo_docs 2>/dev/null
 ```
 
 ```output
@@ -300,6 +339,15 @@ guides/deploy.md  Step-by-step deployment guide for production environments.
                     → links: ../api.md
 setup.md          Development environment setup guide for new contributors.
 verbose.md        word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ...
+
+=== --ignore "guides/*" (relative path) ===
+README.md   Project overview and getting started guide.
+              → links: setup.md, guides/deploy.md
+api.md      API gateway rate limiting strategies and configuration.
+              → links: setup.md
+notes.md    Weekly team meeting notes and action items.
+setup.md    Development environment setup guide for new contributors.
+verbose.md  word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word ...
 ```
 
 ## Test suite
@@ -309,6 +357,6 @@ uv run pytest -q
 ```
 
 ```output
-................................                                         [100%]
-32 passed in 1.62s
+...................................                                      [100%]
+35 passed in 1.75s
 ```
