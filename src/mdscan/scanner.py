@@ -46,7 +46,8 @@ def scan(
         Sorted list of :class:`MdFile` results.
     """
     results: list[MdFile] = []
-    _walk(directory, directory, results, max_depth, ignore_patterns or [],
+    normalized = [p.rstrip("/") if p.endswith("/") else p for p in (ignore_patterns or [])]
+    _walk(directory, directory, results, max_depth, normalized,
           include_excluded_files)
     results.sort(key=lambda f: f.path)
     return results

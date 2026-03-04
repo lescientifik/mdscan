@@ -71,6 +71,21 @@ class TestScan:
         assert "sub/nested.md" not in paths
         assert "top.md" in paths
 
+    def test_ignore_trailing_slash_excludes_directory(self, tmp_path: Path) -> None:
+        """A pattern like 'target/' should exclude the directory and its contents."""
+        target = tmp_path / "target"
+        target.mkdir()
+        (target / "deep.md").write_text(
+            "---\ndescription: Deep.\n---\n# Deep\n", encoding="utf-8"
+        )
+        (tmp_path / "top.md").write_text(
+            "---\ndescription: Top.\n---\n# Top\n", encoding="utf-8"
+        )
+        results = scan(tmp_path, ignore_patterns=["target/"])
+        paths = [f.path for f in results]
+        assert "target/deep.md" not in paths
+        assert "top.md" in paths
+
     def test_scan_populates_links(self, tmp_path: Path) -> None:
         (tmp_path / "index.md").write_text(
             "---\ndescription: Index.\n---\nSee [guide](guide.md) and [faq](faq.md).\n",
