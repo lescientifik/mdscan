@@ -1,6 +1,5 @@
----
-description: CLI tool to scan .md files and display YAML frontmatter descriptions.
----
+![mdscan banner](banner.png)
+
 # mdscan
 
 Scan `.md` files and display their YAML frontmatter descriptions.
