@@ -1,7 +1,5 @@
 ![mdscan banner](banner.png)
 
-# mdscan
-
 Scan `.md` files and display their YAML frontmatter descriptions.
 Built for AI agents that need to discover relevant documentation without reading entire files.
 
