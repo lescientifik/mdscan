@@ -27,6 +27,9 @@ Built for AI agents to discover documentation without reading entire files.
 - [Plan v0.3](docs/plan-cli-v0.3.md) — implementation plan for CLI improvements
 - [Plan v0.2](docs/plan-v0.2.md) — previous plan (config, tree, coverage, all-links)
 - [Demo](demo.md) — interactive demo of all CLI features
+- [PKM for agents](docs/pkm-for-agents.md) — Obsidian features translated into agent-facing primitives; design research for v0.4+
+- [Obsidian query survey](docs/obsidian-query-survey.md) — deep dive into Dataview/Bases/built-in search for v0.4 design
+- [Spec v0.4](docs/spec-v0.4.md) — **living** specification for the next phase, updated as decisions are taken
 
 ## Dev workflow
 
@@ -36,3 +39,9 @@ uv run ruff check .        # lint
 uv run ty check            # type check
 uv run mdscan check-links  # verify doc reachability
 ```
+
+## Conventions
+
+- **No backwards compatibility.** The project is in active pre-1.0 development.
+  Rename, remove, and restructure freely — do not keep aliases, shims, or
+  deprecated paths. Update all call sites instead.
