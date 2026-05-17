@@ -65,7 +65,12 @@ def _parse_frontmatter(text: str) -> dict[str, object] | None:
     raw = text[3:end].strip()
     if not raw:
         return None
-    data = yaml.safe_load(raw)
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError:
+        # Frontmatter block is not valid YAML (e.g. a Jinja template
+        # placeholder like ``{{ card_data }}``) — treat it as absent.
+        return None
     return data if isinstance(data, dict) else None
 
 

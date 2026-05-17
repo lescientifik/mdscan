@@ -18,6 +18,15 @@ class TestExtractDescription:
         text = "---\ntitle: Something\nauthor: Someone\n---\n"
         assert extract_description(text) is None
 
+    def test_returns_none_on_invalid_yaml_frontmatter(self) -> None:
+        """A frontmatter block that is not valid YAML is treated as absent
+        rather than crashing the caller. Real-world trigger: HuggingFace
+        model-card templates whose frontmatter is a Jinja placeholder like
+        ``{{ card_data }}``, which YAML rejects with an unhashable-key error.
+        """
+        text = "---\n{{ card_data }}\n---\n# Model card\n"
+        assert extract_description(text) is None
+
 
 class TestWriteDescription:
     def test_creates_frontmatter(self, tmp_path: Path) -> None:
