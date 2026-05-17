@@ -9,7 +9,7 @@ Built for AI agents to discover documentation without reading entire files.
 
 ## Subcommands
 
-- `mdscan scan [dir]` — list files with descriptions (default)
+- `mdscan list [dir]` — list files with descriptions (default)
 - `mdscan check-links [dir]` — verify all .md files reachable from entrypoint
 - `mdscan tree [dir]` — display document link graph
 - `mdscan coverage [dir]` — documentation completeness stats

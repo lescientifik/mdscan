@@ -40,7 +40,7 @@ class TestSignals:
                 f"---\ndescription: File {i}.\n---\n", encoding="utf-8"
             )
         proc = subprocess.Popen(
-            [sys.executable, "-m", "mdscan", "scan", str(tmp_path)],
+            [sys.executable, "-m", "mdscan", "list", str(tmp_path)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -57,7 +57,7 @@ class TestSignals:
                 f"---\ndescription: File {i}.\n---\n", encoding="utf-8"
             )
         result = subprocess.run(
-            f"{sys.executable} -m mdscan scan {tmp_path} | head -1",
+            f"{sys.executable} -m mdscan list {tmp_path} | head -1",
             shell=True,
             capture_output=True,
             text=True,
@@ -65,7 +65,7 @@ class TestSignals:
         assert "Traceback" not in result.stderr
 
 
-class TestScanExitCodes:
+class TestListExitCodes:
     def test_exit_0_all_valid(self, all_valid: Path) -> None:
         result = run_mdscan(str(all_valid))
         assert result.returncode == 0
@@ -107,7 +107,7 @@ class TestScanExitCodes:
         assert len(stdout_words) == 151  # 150 words + "..."
 
 
-class TestScanOutput:
+class TestListOutput:
     def test_stdout_excludes_files_without_description(self, tmp_path: Path) -> None:
         (tmp_path / "has.md").write_text(
             "---\ndescription: Present.\n---\n", encoding="utf-8"
@@ -134,8 +134,8 @@ class TestScanOutput:
         assert missing["description"] is None
 
 
-class TestScanLinks:
-    def test_scan_text_does_not_show_links(self, tmp_path: Path) -> None:
+class TestListLinks:
+    def test_list_text_does_not_show_links(self, tmp_path: Path) -> None:
         (tmp_path / "index.md").write_text(
             "---\ndescription: Index page.\n---\nSee [guide](guide.md) and [faq](faq.md).\n",
             encoding="utf-8",
@@ -148,7 +148,7 @@ class TestScanLinks:
         assert "index.md" in result.stdout
         assert "guide.md" in result.stdout
 
-    def test_scan_json_does_not_include_links(self, tmp_path: Path) -> None:
+    def test_list_json_does_not_include_links(self, tmp_path: Path) -> None:
         (tmp_path / "a.md").write_text(
             "---\ndescription: A.\n---\nSee [b](b.md).\n", encoding="utf-8"
         )
@@ -348,7 +348,7 @@ class TestExitCodes:
         assert result.returncode == 3
 
     def test_exit_1_remains_for_soft_warnings(self, tmp_path: Path) -> None:
-        """scan with missing descriptions still exits 1."""
+        """list with missing descriptions still exits 1."""
         (tmp_path / "bad.md").write_text("# No desc\n", encoding="utf-8")
         result = run_mdscan(str(tmp_path))
         assert result.returncode == 1
@@ -465,11 +465,11 @@ class TestConfig:
 
 
 class TestHelp:
-    def test_scan_help_has_examples(self) -> None:
-        result = run_mdscan("scan", "-h")
+    def test_list_help_has_examples(self) -> None:
+        result = run_mdscan("list", "-h")
         assert result.returncode == 0
         assert "example" in result.stdout.lower()
-        assert "mdscan scan" in result.stdout
+        assert "mdscan list" in result.stdout
 
     def test_check_links_help_has_examples(self) -> None:
         result = run_mdscan("check-links", "-h")
@@ -501,15 +501,15 @@ class TestHelp:
         assert "github.com" in result.stdout
 
     def test_typo_suggestion(self) -> None:
-        result = run_mdscan("scna")
+        result = run_mdscan("lst")
         assert result.returncode == 2
         assert "did you mean" in result.stderr.lower()
-        assert "scan" in result.stderr
+        assert "list" in result.stderr
 
     def test_unknown_command_no_match(self) -> None:
         result = run_mdscan("xyzzy")
-        # No close match — falls through to scan which treats it as a path.
-        # "xyzzy" is not a directory, so scan will error.
+        # No close match — falls through to list which treats it as a path.
+        # "xyzzy" is not a directory, so list will error.
         assert result.returncode == 2
 
     def test_help_subcommand(self) -> None:
@@ -519,14 +519,14 @@ class TestHelp:
         assert result.stdout == top.stdout
 
     def test_help_subcommand_with_target(self) -> None:
-        result = run_mdscan("help", "scan")
+        result = run_mdscan("help", "list")
         assert result.returncode == 0
-        direct = run_mdscan("scan", "--help")
+        direct = run_mdscan("list", "--help")
         assert result.stdout == direct.stdout
 
 
 class TestNextSteps:
-    def test_scan_suggests_check_links(self, all_valid: Path) -> None:
+    def test_list_suggests_check_links(self, all_valid: Path) -> None:
         result = run_mdscan(str(all_valid))
         assert "check-links" in result.stderr
 
@@ -646,14 +646,14 @@ class TestVerbose:
 
 class TestPlain:
     def test_plain_output_tab_separated(self, all_valid: Path) -> None:
-        result = run_mdscan("scan", "--plain", str(all_valid))
+        result = run_mdscan("list", "--plain", str(all_valid))
         assert result.returncode == 0
         for line in result.stdout.strip().splitlines():
             assert line.count("\t") == 1
 
     def test_plain_pipeable_to_cut(self, all_valid: Path) -> None:
         """Tab-separated output: field 1 is path only."""
-        result = run_mdscan("scan", "--plain", str(all_valid))
+        result = run_mdscan("list", "--plain", str(all_valid))
         for line in result.stdout.strip().splitlines():
             path = line.split("\t")[0]
             assert path.endswith(".md")
@@ -665,7 +665,7 @@ class TestLimit:
             (tmp_path / f"f{i:02d}.md").write_text(
                 f"---\ndescription: File {i}.\n---\n", encoding="utf-8"
             )
-        result = run_mdscan("scan", "--limit", "3", str(tmp_path))
+        result = run_mdscan("list", "--limit", "3", str(tmp_path))
         lines = result.stdout.strip().splitlines()
         assert len(lines) == 3
 
@@ -674,7 +674,7 @@ class TestLimit:
             (tmp_path / f"f{i:02d}.md").write_text(
                 f"---\ndescription: File {i}.\n---\n", encoding="utf-8"
             )
-        result = run_mdscan("scan", "--json", "--limit", "3", str(tmp_path))
+        result = run_mdscan("list", "--json", "--limit", "3", str(tmp_path))
         data = json.loads(result.stdout)
         assert len(data) == 3
 
@@ -683,7 +683,7 @@ class TestLimit:
             (tmp_path / f"f{i}.md").write_text(
                 f"---\ndescription: File {i}.\n---\n", encoding="utf-8"
             )
-        result = run_mdscan("scan", "--limit", "0", str(tmp_path))
+        result = run_mdscan("list", "--limit", "0", str(tmp_path))
         lines = result.stdout.strip().splitlines()
         assert len(lines) == 5
 

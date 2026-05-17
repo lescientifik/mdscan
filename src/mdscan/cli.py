@@ -55,43 +55,43 @@ def _main_inner(argv: list[str] | None = None) -> None:
 
     subparsers = parser.add_subparsers(dest="command")
 
-    # -- scan (default) -----------------------------------------------------
-    scan_parser = subparsers.add_parser(
-        "scan",
-        help="Scan .md files and display descriptions (default).",
+    # -- list (default) -----------------------------------------------------
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List .md files and display descriptions (default).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="examples:\n  mdscan scan docs/\n  mdscan scan --json --max-depth 2 .",
+        epilog="examples:\n  mdscan list docs/\n  mdscan list --json --max-depth 2 .",
     )
-    scan_parser.add_argument(
+    list_parser.add_argument(
         "directory",
         nargs="?",
         default=".",
         help="Directory to scan (default: current directory).",
     )
-    scan_parser.add_argument("--json", action="store_true", help="Output as JSON array.")
-    scan_parser.add_argument(
+    list_parser.add_argument("--json", action="store_true", help="Output as JSON array.")
+    list_parser.add_argument(
         "--max-depth",
         type=int,
         default=None,
         help="Limit directory recursion depth.",
     )
-    scan_parser.add_argument(
+    list_parser.add_argument(
         "--ignore",
         action="append",
         help="Additional glob patterns to exclude (repeatable).",
     )
-    scan_parser.add_argument(
+    list_parser.add_argument(
         "--plain",
         action="store_true",
         help="Tab-separated output (path\\tdescription).",
     )
-    scan_parser.add_argument(
+    list_parser.add_argument(
         "--limit",
         type=int,
         default=None,
         help="Limit number of results shown.",
     )
-    _add_common_flags(scan_parser)
+    _add_common_flags(list_parser)
 
     # -- check-links --------------------------------------------------------
     cl_parser = subparsers.add_parser(
@@ -198,17 +198,17 @@ def _main_inner(argv: list[str] | None = None) -> None:
     )
 
     # -- parse --------------------------------------------------------------
-    # Default to "scan" when no subcommand is given, so that bare
+    # Default to "list" when no subcommand is given, so that bare
     # `mdscan docs/` and `mdscan --json docs/` keep working.
     # Let --help and --version through to the top-level parser.
     raw = argv if argv is not None else sys.argv[1:]
     known_commands = {
-        "scan", "check-links", "tree", "coverage", "set-description", "help",
+        "list", "check-links", "tree", "coverage", "set-description", "help",
     }
     top_level_flags = {"-h", "--help", "--version"}
 
     if raw and raw[0] not in known_commands and raw[0] not in top_level_flags:
-        # Detect typo before falling through to scan.
+        # Detect typo before falling through to list.
         arg = raw[0]
         looks_like_command = arg[0:1].isalpha() and "/" not in arg and "." not in arg
         if looks_like_command:
@@ -219,7 +219,7 @@ def _main_inner(argv: list[str] | None = None) -> None:
                 sys.exit(EXIT_USAGE)
 
     if not raw or (raw[0] not in known_commands and raw[0] not in top_level_flags):
-        raw = ["scan", *raw]
+        raw = ["list", *raw]
 
     args = parser.parse_args(raw)
 
@@ -233,7 +233,7 @@ def _main_inner(argv: list[str] | None = None) -> None:
         args.verbose = os.environ.get("MDSCAN_VERBOSE") == "1"
 
     sub_parsers_map = {
-        "scan": scan_parser,
+        "list": list_parser,
         "check-links": cl_parser,
         "tree": tree_parser,
         "coverage": cov_parser,
@@ -246,8 +246,8 @@ def _main_inner(argv: list[str] | None = None) -> None:
         else:
             parser.print_help()
         sys.exit(EXIT_OK)
-    elif args.command == "scan":
-        _run_scan(args)
+    elif args.command == "list":
+        _run_list(args)
     elif args.command == "check-links":
         _run_check_links(args)
     elif args.command == "tree":
@@ -263,8 +263,8 @@ def _main_inner(argv: list[str] | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run_scan(args: argparse.Namespace) -> None:
-    """Execute the default scan subcommand."""
+def _run_list(args: argparse.Namespace) -> None:
+    """Execute the default list subcommand."""
     directory = Path(args.directory)
     quiet = args.quiet
     verbose = args.verbose

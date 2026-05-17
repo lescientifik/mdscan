@@ -14,8 +14,8 @@ description: Audit of mdscan CLI against clig.dev and agent-focused CLI design p
 | Principle | Status |
 |-----------|--------|
 | stdout/stderr separation | Correct: data → stdout, diagnostics → stderr |
-| `--json` on all read commands | Present on scan, check-links, tree, coverage |
-| Default command (`scan`) | Implicit, no subcommand needed |
+| `--json` on all read commands | Present on list, check-links, tree, coverage |
+| Default command (`list`) | Implicit, no subcommand needed |
 | Exit code 2 for usage errors | Consistent across all subcommands |
 | Config in pyproject.toml + CLI override | Proper precedence: flags > config |
 | Structured error prefixes | `error:`, `warn:`, `hint:`, `fix:` |
@@ -41,13 +41,13 @@ All `--help` output uses default argparse formatting with zero examples.
 - **Agent doc**: "Each subcommand's --help should include one example with realistic values"
 
 #### 3. No typo suggestions
-`mdscan scna` gives a generic argparse error, not "Did you mean: scan?"
+`mdscan lst` gives a generic argparse error, not "Did you mean: list?"
 
 - **clig.dev**: "Suggest corrected commands when users make typos"
 - **Agent doc**: "Errors that teach — every failed interaction must answer what now?"
 
 #### 4. No next-step suggestions after success
-After a successful `mdscan scan`, no hint suggests running `check-links` or `coverage`.
+After a successful `mdscan list`, no hint suggests running `check-links` or `coverage`.
 
 - **clig.dev**: "Suggest commands users should run next to discover workflows"
 - **Agent doc**: "Every output is a conversation turn, not a dead end"
@@ -81,7 +81,7 @@ Top-level `--help` has no GitHub URL or bug report path.
 - **clig.dev**: "Provide a support path in top-level help"
 
 #### 10. No pagination / `--limit`
-`scan` on a large repo dumps everything. No `--limit` or `--offset`.
+`list` on a large repo dumps everything. No `--limit` or `--offset`.
 
 - **Agent doc**: "Offer truncation/pagination flags: --limit, --offset"
 - Note: `--max-depth` exists and is good.
@@ -89,7 +89,7 @@ Top-level `--help` has no GitHub URL or bug report path.
 ### P2 — Minor
 
 #### 11. No `help` subcommand
-`mdscan help scan` doesn't work, only `mdscan scan -h`.
+`mdscan help list` doesn't work, only `mdscan list -h`.
 
 - **clig.dev**: "Display help at -h, --help, and help subcommand"
 
